@@ -1,0 +1,18 @@
+{
+  "name": "lifeapp-food-label-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.1",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1"
+  }
+}

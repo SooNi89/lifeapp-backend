@@ -73,7 +73,7 @@ function normalizeSupplementFactsText(value) {
     )
     .filter(Boolean);
 
-  return cleaned.length ? cleaned.join(", ") : null;
+  return cleaned.length ? cleaned.join("\n") : null;
 }
 
 /**

@@ -17,7 +17,7 @@ Classify the label and fill ONLY the fields that apply. Use null for anything no
 === DIETARY SUPPLEMENT (Supplement Facts panel, "Serving Size", active ingredients) ===
 - name, brand: as printed on the label
 - servingSizeText: copy the exact printed "Serving Size" line (e.g. "1 Veg Capsule", "2 Softgels"). This is the single serving the user takes. Do NOT use one vitamin's amount (e.g. "Thiamine 50 mg") as serving size — that belongs in supplement facts only.
-- supplementFactsText: multi-line string of the Supplement Facts table: each active ingredient and amount per serving (and % Daily Value if printed). Do NOT put the "Other ingredients" section here.
+- supplementFactsText: readable list of ACTIVE ingredients and amounts per serving only (line-separated or comma-separated). Keep units (mg, mcg, IU, g, etc). NEVER include % Daily Value, "%", or DV columns. Do NOT put the "Other ingredients" section here.
 - otherIngredientsText: only the "Other ingredients" / inactive excipients list if present; otherwise null
 - form: dosage form if clear in English snake_key style or plain words: capsule, tablet, softgel, powder, liquid, drops, gummy, scoop — else null
 - ingredientsText: null for supplements (do not duplicate supplement facts or other ingredients here)

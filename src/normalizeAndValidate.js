@@ -50,6 +50,32 @@ function coerceNullableString(value) {
   return t.length ? t : null;
 }
 
+function normalizeSupplementFactsText(value) {
+  const base = coerceNullableString(value);
+  if (!base) return null;
+
+  // Unify delimiters and remove obvious Daily Value headers.
+  const chunks = base
+    .replace(/\r/g, "\n")
+    .split(/\n|;/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .filter((line) => !/daily\s*value|%dv|%\s*dv/i.test(line));
+
+  const cleaned = chunks
+    .map((line) =>
+      line
+        // Remove trailing percentage blocks: "4167%", "75 %", "% Daily Value"
+        .replace(/\b\d+(?:[.,]\d+)?\s*%(\s*(daily\s*value|dv))?\b/gi, "")
+        .replace(/%\s*(daily\s*value|dv)?/gi, "")
+        .replace(/\s{2,}/g, " ")
+        .trim()
+    )
+    .filter(Boolean);
+
+  return cleaned.length ? cleaned.join(", ") : null;
+}
+
 /**
  * Ensures the API response shape for the iOS client.
  * Trims strings, coerces obvious numerics, maps empty to null.
@@ -59,6 +85,8 @@ export function normalizeParsedLabel(raw) {
   for (const key of ALL_KEYS) {
     if (NUMERIC_FIELDS.has(key)) {
       out[key] = coerceNullableNumber(raw?.[key]);
+    } else if (key === "supplementFactsText") {
+      out[key] = normalizeSupplementFactsText(raw?.[key]);
     } else {
       out[key] = coerceNullableString(raw?.[key]);
     }

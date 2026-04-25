@@ -41,11 +41,17 @@ Health check: `GET /health`
   "fatsPer100g": 5,
   "carbsPer100g": 3.6,
   "standardPortionGrams": 150,
-  "portionName": "1 container"
+  "portionName": "1 container",
+  "form": null,
+  "servingSizeText": null,
+  "supplementFactsText": null,
+  "otherIngredientsText": null
 }
 ```
 
-Fields may be `null` when not clearly visible on the label.
+For **dietary supplement** labels, `ingredientsText` is usually `null` while `servingSizeText` (Serving Size line), `supplementFactsText` (active ingredients per serving), and `otherIngredientsText` are filled. Food products use `ingredientsText` and nutrition fields; supplement-specific strings are `null`.
+
+All keys are always present; values may be `null` when not clearly visible on the label.
 
 ## HTTP errors
 

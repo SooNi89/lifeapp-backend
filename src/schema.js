@@ -9,8 +9,8 @@ function nullableNumber() {
 }
 
 /**
- * JSON Schema for OpenAI Responses API structured output (food label extraction).
- * All keys are required; use null when a value is unknown (matches normalization layer).
+ * JSON Schema for OpenAI Responses API structured output (food + supplement labels).
+ * All keys required; use null when unknown (matches normalization layer).
  */
 export const FOOD_LABEL_JSON_SCHEMA = {
   type: "object",
@@ -25,6 +25,10 @@ export const FOOD_LABEL_JSON_SCHEMA = {
     "carbsPer100g",
     "standardPortionGrams",
     "portionName",
+    "form",
+    "servingSizeText",
+    "supplementFactsText",
+    "otherIngredientsText",
   ],
   properties: {
     name: nullableString(),
@@ -36,5 +40,9 @@ export const FOOD_LABEL_JSON_SCHEMA = {
     carbsPer100g: nullableNumber(),
     standardPortionGrams: nullableNumber(),
     portionName: nullableString(),
+    form: nullableString(),
+    servingSizeText: nullableString(),
+    supplementFactsText: nullableString(),
+    otherIngredientsText: nullableString(),
   },
 };

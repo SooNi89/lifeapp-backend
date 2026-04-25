@@ -11,6 +11,10 @@ const STRING_FIELDS = new Set([
   "brand",
   "ingredientsText",
   "portionName",
+  "form",
+  "servingSizeText",
+  "supplementFactsText",
+  "otherIngredientsText",
 ]);
 
 const ALL_KEYS = [...NUMERIC_FIELDS, ...STRING_FIELDS];

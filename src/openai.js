@@ -2,21 +2,31 @@ import { FOOD_LABEL_JSON_SCHEMA } from "./schema.js";
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 
-const LABEL_PROMPT = `You are reading a packaged food product label photo.
+const LABEL_PROMPT = `You are reading a packaged product label photo. It may be FOOD or a DIETARY SUPPLEMENT (vitamins, minerals, herbal blends, etc.).
 
-Extract ONLY these fields if they are clearly visible on the label. If uncertain or not shown, use null.
-- Product name (not marketing slogans)
-- Brand / manufacturer name
-- Full ingredients list text as printed (one string)
-- Nutritional values per 100 g: calories (kcal), protein (g), fat (g), carbohydrates (g)
-- Standard portion size in grams and its name (e.g. "30 g", "1 slice") only if explicitly printed
+Classify the label and fill ONLY the fields that apply. Use null for anything not shown or not applicable.
 
-Rules:
-- Prefer precision over completeness; do not guess aggressively.
-- Numbers must be plain numbers in the JSON (e.g. 12.5), not strings.
-- Do not include units in numeric fields.
-- Do not add fields beyond the schema.
-- Output must match the JSON schema only.`;
+=== FOOD (nutrition facts, ingredients list for a food product) ===
+- name: product name (not slogans)
+- brand: manufacturer
+- ingredientsText: full ingredients list as one string
+- caloriesPer100g, proteinsPer100g, fatsPer100g, carbsPer100g: per 100 g if printed
+- standardPortionGrams, portionName: only if an explicit standard portion is printed
+- form, servingSizeText, supplementFactsText, otherIngredientsText: null
+
+=== DIETARY SUPPLEMENT (Supplement Facts panel, "Serving Size", active ingredients) ===
+- name, brand: as printed on the label
+- servingSizeText: copy the exact printed "Serving Size" line (e.g. "1 Veg Capsule", "2 Softgels"). This is the single serving the user takes. Do NOT use one vitamin's amount (e.g. "Thiamine 50 mg") as serving size — that belongs in supplement facts only.
+- supplementFactsText: multi-line string of the Supplement Facts table: each active ingredient and amount per serving (and % Daily Value if printed). Do NOT put the "Other ingredients" section here.
+- otherIngredientsText: only the "Other ingredients" / inactive excipients list if present; otherwise null
+- form: dosage form if clear in English snake_key style or plain words: capsule, tablet, softgel, powder, liquid, drops, gummy, scoop — else null
+- ingredientsText: null for supplements (do not duplicate supplement facts or other ingredients here)
+- caloriesPer100g, proteinsPer100g, fatsPer100g, carbsPer100g, standardPortionGrams, portionName: null unless a food-style nutrition table is clearly present
+
+General rules:
+- Prefer accuracy over guessing.
+- Numeric fields: plain JSON numbers only, no units in number fields.
+- Output must match the JSON schema exactly (all keys present, null when unknown).`;
 
 /**
  * @param {object} opts

@@ -71,9 +71,34 @@ function normalizeSupplementFactsText(value) {
         .replace(/\s{2,}/g, " ")
         .trim()
     )
-    .filter(Boolean);
+    .filter(Boolean)
+    .flatMap(splitIngredientLine);
 
   return cleaned.length ? cleaned.join("\n") : null;
+}
+
+function splitIngredientLine(line) {
+  const out = [];
+  let depth = 0;
+  let current = "";
+  for (let i = 0; i < line.length; i += 1) {
+    const ch = line[i];
+    if (ch === "(") depth += 1;
+    if (ch === ")") depth = Math.max(0, depth - 1);
+
+    if (ch === "," && depth === 0) {
+      const rest = line.slice(i + 1).trimStart();
+      // Split only when comma is likely between ingredient records.
+      if (/^[A-ZА-ЯЁ][A-Za-zА-Яа-яЁё0-9(]/.test(rest)) {
+        if (current.trim()) out.push(current.trim());
+        current = "";
+        continue;
+      }
+    }
+    current += ch;
+  }
+  if (current.trim()) out.push(current.trim());
+  return out;
 }
 
 /**

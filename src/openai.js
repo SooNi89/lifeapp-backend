@@ -1,4 +1,4 @@
-import { FOOD_LABEL_JSON_SCHEMA } from "./schema.js";
+import { FOOD_LABEL_JSON_SCHEMA, THERAPY_CHAT_JSON_SCHEMA } from "./schema.js";
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 
@@ -27,6 +27,21 @@ General rules:
 - Prefer accuracy over guessing.
 - Numeric fields: plain JSON numbers only, no units in number fields.
 - Output must match the JSON schema exactly (all keys present, null when unknown).`;
+
+const THERAPY_SYSTEM_PROMPT = `You are the dedicated therapy conversation module inside LifeApp. This is not a generic chatbot and not productivity coaching.
+
+Respond in Russian. Be direct, careful, concrete, and psychologically attentive. Avoid fake warmth, motivational filler, generic therapy clichés, and "I hear you" style openings.
+
+Do not diagnose. Do not claim to be a licensed therapist. Do not present interpretations as certain. Ask at most one clear question when more context is needed.
+
+If the user expresses intent or risk of self-harm, suicide, harming others, or immediate danger: respond with calm urgency, encourage contacting local emergency services or a trusted nearby person immediately, and keep the answer practical.
+
+Memory behavior:
+- Never say that you saved memory.
+- You may suggest memory only when the content has stable long-term value: recurring emotional patterns, important relationship dynamics, stable fears/conflicts, meaningful coping mechanisms, or major life events.
+- Do not suggest memory for ordinary daily frustration, logistics, transient mood, or small talk.
+
+Return only valid JSON matching the schema.`;
 
 /**
  * @param {object} opts
@@ -129,6 +144,129 @@ export async function extractFoodLabelWithOpenAI({
   }
 
   return outputText;
+}
+
+/**
+ * @param {object} opts
+ * @param {string} opts.apiKey
+ * @param {string} opts.model
+ * @param {object} opts.payload Sanitized therapy request payload.
+ * @returns {Promise<string>} Raw JSON text from model (single object).
+ */
+export async function therapyChatWithOpenAI({ apiKey, model, payload }) {
+  const contextText = buildTherapyContextText(payload);
+  const body = {
+    model,
+    input: [
+      {
+        role: "developer",
+        content: [{ type: "input_text", text: THERAPY_SYSTEM_PROMPT }],
+      },
+      {
+        role: "user",
+        content: [{ type: "input_text", text: contextText }],
+      },
+    ],
+    text: {
+      format: {
+        type: "json_schema",
+        name: "therapy_chat_response",
+        strict: true,
+        schema: THERAPY_CHAT_JSON_SCHEMA,
+      },
+    },
+  };
+
+  const res = await fetch(OPENAI_RESPONSES_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const text = await res.text();
+  let json;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    const err = new Error("OpenAI response was not valid JSON");
+    err.code = "OPENAI_BAD_JSON";
+    err.status = 500;
+    throw err;
+  }
+
+  if (!res.ok) {
+    const err = new Error(json?.error?.message || `OpenAI HTTP ${res.status}`);
+    err.code = "OPENAI_HTTP_ERROR";
+    err.status = 500;
+    err.openaiStatus = res.status;
+    throw err;
+  }
+
+  if (json.status && json.status !== "completed") {
+    const err = new Error(`OpenAI response incomplete: ${json.status}`);
+    err.code = "OPENAI_INCOMPLETE";
+    err.status = 500;
+    throw err;
+  }
+
+  const refusal = findRefusal(json);
+  if (refusal) {
+    const err = new Error("Model refused therapy chat request");
+    err.code = "OPENAI_REFUSAL";
+    err.status = 422;
+    throw err;
+  }
+
+  const outputText = extractOutputText(json);
+  if (!outputText) {
+    const err = new Error("No text output from OpenAI");
+    err.code = "OPENAI_NO_OUTPUT";
+    err.status = 500;
+    throw err;
+  }
+
+  return outputText;
+}
+
+function buildTherapyContextText(payload) {
+  const profile = payload.therapyProfile || {};
+  const forbiddenBehaviors = Array.isArray(profile.forbiddenBehaviors)
+    ? profile.forbiddenBehaviors
+    : [];
+
+  return [
+    "Build the answer using the context layers in this order. Keep layers separate conceptually.",
+    "",
+    "1. Therapy profile system prompt:",
+    profile.systemPrompt || "",
+    "",
+    "2. Communication style:",
+    profile.communicationStyle || "",
+    "",
+    "3. Memory rules:",
+    profile.memoryRules || "",
+    "",
+    "4. Forbidden behaviors:",
+    JSON.stringify(forbiddenBehaviors),
+    "",
+    "5. Active long-term memory notes, max 20:",
+    JSON.stringify(payload.memoryNotes || []),
+    "",
+    "6. Day context compact JSON:",
+    JSON.stringify(payload.dayContext || {}),
+    "",
+    "7. Recent chat history, max 30:",
+    JSON.stringify(payload.recentMessages || []),
+    "",
+    "8. Selected day:",
+    payload.selectedDay || null,
+    "",
+    "9. Current user message:",
+    payload.userMessage,
+  ].join("\n");
 }
 
 function findRefusal(responseJson) {

@@ -1,6 +1,9 @@
-# Food label parsing API
+# LifeApp backend API
 
-Small Node.js service for the LifeApp iOS client: **`POST /parse-food-label`** accepts a multipart image, calls the OpenAI **Responses** API with vision + structured JSON, then returns normalized JSON (no API keys to the app).
+Small Node.js service for the LifeApp iOS client. It keeps OpenAI keys server-side and exposes:
+
+- **`POST /parse-food-label`** for packaged food/supplement label parsing.
+- **`POST /therapy/chat`** for the Therapy Chat MVP.
 
 ## Environment variables
 
@@ -29,7 +32,75 @@ npm start
 
 Health check: `GET /health`
 
-## Example success response
+## POST /therapy/chat
+
+Accepts JSON from the iOS therapy module:
+
+```json
+{
+  "userMessage": "Мне сложно понять, почему я так резко реагирую.",
+  "recentMessages": [
+    {
+      "role": "user",
+      "text": "Вчера опять поссорилась.",
+      "createdAt": "2026-05-06T10:00:00Z",
+      "linkedDay": "2026-05-06T00:00:00Z"
+    }
+  ],
+  "selectedDay": "2026-05-06T00:00:00Z",
+  "memoryNotes": [
+    {
+      "title": "Повторяющийся страх отвержения",
+      "text": "В близких отношениях часто появляется резкая тревога, если ответ задерживается.",
+      "tags": ["отношения", "тревога"],
+      "importance": 0.82
+    }
+  ],
+  "therapyProfile": {
+    "systemPrompt": "...",
+    "communicationStyle": "...",
+    "memoryRules": "...",
+    "forbiddenBehaviors": ["морализаторство", "общие self-help клише"]
+  },
+  "dayContext": {
+    "sleepSummary": "Сон: 23:40–07:15",
+    "workoutsSummary": "Тренировка: 3 из 5 упражнений",
+    "steps": 8200,
+    "moodStateNotes": ["Спокойно: усталость"],
+    "cycleInfo": null,
+    "importantEntries": []
+  }
+}
+```
+
+Validation and limits:
+
+- `userMessage` is required.
+- `recentMessages` is optional and limited to the last 30.
+- `memoryNotes` is optional and limited to 20.
+- Long text fields and nested day context are truncated before calling OpenAI.
+- Production logs should contain request id, status, and timing only, not full therapy text.
+
+Response:
+
+```json
+{
+  "assistantMessage": "Похоже, здесь важна не только сама ситуация, а скорость, с которой она становится доказательством чего-то про вас или отношения.",
+  "memorySuggestion": {
+    "title": "Быстрая тревога при задержке ответа",
+    "text": "В близких отношениях задержка ответа может быстро переживаться как признак отвержения или потери контакта.",
+    "tags": ["отношения", "тревога"],
+    "importance": 0.82,
+    "reason": "Это похоже на устойчивый повторяющийся паттерн, а не на разовую бытовую ситуацию."
+  }
+}
+```
+
+`memorySuggestion` may be `null`. The backend only suggests memory candidates; the app decides whether to save them.
+
+## POST /parse-food-label
+
+### Example success response
 
 ```json
 {
@@ -57,7 +128,7 @@ All keys are always present; values may be `null` when not clearly visible on th
 
 | Status | Meaning |
 |--------|---------|
-| 400 | Missing/invalid `image` field or bad upload |
+| 400 | Missing/invalid `image` field, bad upload, invalid JSON, missing `userMessage`, or request body too large |
 | 422 | Model refusal, or JSON/schema could not be validated after the call |
 | 500 | Missing `OPENAI_API_KEY`, OpenAI/network failure, or unexpected server error |
 

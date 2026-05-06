@@ -46,3 +46,32 @@ export const FOOD_LABEL_JSON_SCHEMA = {
     otherIngredientsText: nullableString(),
   },
 };
+
+export const THERAPY_CHAT_JSON_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["assistantMessage", "memorySuggestion"],
+  properties: {
+    assistantMessage: { type: "string" },
+    memorySuggestion: {
+      anyOf: [
+        {
+          type: "object",
+          additionalProperties: false,
+          required: ["title", "text", "tags", "importance", "reason"],
+          properties: {
+            title: { type: "string" },
+            text: { type: "string" },
+            tags: {
+              type: "array",
+              items: { type: "string" },
+            },
+            importance: nullableNumber(),
+            reason: nullableString(),
+          },
+        },
+        { type: "null" },
+      ],
+    },
+  },
+};
